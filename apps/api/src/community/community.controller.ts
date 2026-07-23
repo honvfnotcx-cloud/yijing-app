@@ -6,7 +6,7 @@ export class CommunityController {
   constructor(private s: CommunityService) {} 
  
   @Get('feed') feed(@Query('page') page?: string, @Query('limit') limit?: string) { 
-    return this.s.getFeed(Number(page) 
+    return this.s.getFeed(Number(page) || 1, Number(limit) || 10) 
   }
  
   @Post('posts') createPost(@Query('userId') uid: string, @Body() dto: any) { 
@@ -18,7 +18,7 @@ export class CommunityController {
   } 
  
   @Get('posts/:postId/comments') getComments(@Param('postId') pid: string, @Query('page') page?: string, @Query('limit') limit?: string) { 
-    return this.s.getComments(pid, Number(page) 
+    return this.s.getComments(pid, Number(page) || 1, Number(limit) || 10) 
   }
  
   @Post('follow') follow(@Query('userId') uid: string, @Body() dto: any) { 
