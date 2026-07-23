@@ -1,12 +1,12 @@
-generator client { provider = \"prisma-client-js\" } 
+generator client { provider = "prisma-client-js" } 
  
-datasource db { provider = \"postgresql\" url = env(\"DATABASE_URL\") } 
+datasource db { provider = "postgresql" url = env("DATABASE_URL") } 
  
 model User { 
   id             String   @id @default(cuid()) 
   email          String?  @unique 
-  locale         String   @default(\"en\") 
-  currentTimezone String   @default(\"UTC\") 
+  locale         String   @default("en") 
+  currentTimezone String   @default("UTC") 
   ageVerified    Boolean  @default(false) 
   consentVersion Int      @default(1) 
   createdAt      DateTime @default(now()) 
@@ -26,7 +26,7 @@ model BirthProfile {
   user           User     @relation(fields: [userId], references: [id]) 
   birthDateLocal String 
   birthTimeLocal String 
-  precision      String   @default(\"exact\") 
+  precision      String   @default("exact") 
   birthTimezone  String 
   encryptedPlace String? 
   engineVersion  Int      @default(1) 
@@ -100,7 +100,7 @@ model Report {
   post     Post?    @relation(fields: [postId], references: [id]) 
   reporterId String 
   reason   String 
-  status   String   @default(\"pending\") 
+  status   String   @default("pending") 
   createdAt DateTime @default(now()) 
 } 
  
@@ -117,8 +117,8 @@ model Device {
   userId      String 
   user        User     @relation(fields: [userId], references: [id]) 
   pushToken   String 
-  platform    String   @default(\"ios\") 
-  timezone    String   @default(\"UTC\") 
+  platform    String   @default("ios") 
+  timezone    String   @default("UTC") 
   isActive    Boolean  @default(true) 
   createdAt   DateTime @default(now()) 
   updatedAt   DateTime @updatedAt 
@@ -134,7 +134,7 @@ model NotificationDelivery {
   localDate     String 
   scheduledAt   DateTime 
   sentAt        DateTime? 
-  status        String    @default(\"scheduled\") 
+  status        String    @default("scheduled") 
   providerId    String? 
   createdAt     DateTime  @default(now()) 
   @@unique([userId, type, localDate]) 
@@ -145,7 +145,7 @@ model Entitlement {
   userId    String 
   user      User     @relation(fields: [userId], references: [id]) 
   productId String 
-  tier      String   @default(\"free\") 
+  tier      String   @default("free") 
   expiresAt DateTime? 
   createdAt DateTime @default(now()) 
   updatedAt DateTime @updatedAt 
@@ -166,7 +166,7 @@ model PrivacyRequest {
   id        String   @id @default(cuid()) 
   userId    String 
   type      String 
-  status    String   @default(\"pending\") 
+  status    String   @default("pending") 
   completedAt DateTime? 
   createdAt DateTime @default(now()) 
 } 
