@@ -1,0 +1,1 @@
+import { Controller, Post, Body, Query } from '@nestjs/common'; import { NotificationsService } from './notifications.service'; @Controller('notifications') export class NotificationsController { constructor(private s: NotificationsService) {} @Post('devices') register(@Query('userId') uid: string, @Body() dto: any) { return this.s.registerDevice(uid, dto); } } 

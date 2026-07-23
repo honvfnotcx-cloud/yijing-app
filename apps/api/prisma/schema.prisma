@@ -1,0 +1,172 @@
+generator client { provider = \"prisma-client-js\" } 
+ 
+datasource db { provider = \"postgresql\" url = env(\"DATABASE_URL\") } 
+ 
+model User { 
+  id             String   @id @default(cuid()) 
+  email          String?  @unique 
+  locale         String   @default(\"en\") 
+  currentTimezone String   @default(\"UTC\") 
+  ageVerified    Boolean  @default(false) 
+  consentVersion Int      @default(1) 
+  createdAt      DateTime @default(now()) 
+  updatedAt      DateTime @updatedAt 
+  birthProfile   BirthProfile? 
+  guidance       DailyGuidance[] 
+  reflections   Reflection[] 
+  posts          Post[] 
+  comments       Comment[] 
+  devices        Device[] 
+  entitlements   Entitlement[] 
+} 
+ 
+model BirthProfile { 
+  id             String   @id @default(cuid()) 
+  userId         String   @unique 
+  user           User     @relation(fields: [userId], references: [id]) 
+  birthDateLocal String 
+  birthTimeLocal String 
+  precision      String   @default(\"exact\") 
+  birthTimezone  String 
+  encryptedPlace String? 
+  engineVersion  Int      @default(1) 
+  createdAt      DateTime @default(now()) 
+  updatedAt      DateTime @updatedAt 
+} 
+ 
+model DailyGuidance { 
+  id               String   @id @default(cuid()) 
+  userId           String 
+  user             User     @relation(fields: [userId], references: [id]) 
+  localDate        String 
+  hexagram         String 
+  hexagramName     String 
+  hexagramSymbol   String 
+  theme            String 
+  guidance         String 
+  reflectionQuestion String 
+  contentVersion   Int      @default(1) 
+  generatedAt      DateTime @default(now()) 
+  reflection       Reflection? 
+  @@unique([userId, localDate]) 
+} 
+ 
+model Reflection { 
+  id         String   @id @default(cuid()) 
+  userId     String 
+  user       User     @relation(fields: [userId], references: [id]) 
+  guidanceId String   @unique 
+  guidance   DailyGuidance @relation(fields: [guidanceId], references: [id]) 
+  localDate  String 
+  mood       String 
+  note       String? 
+  submittedAt DateTime @default(now()) 
+} 
+ 
+model Post { 
+  id          String    @id @default(cuid()) 
+  userId      String 
+  user        User      @relation(fields: [userId], references: [id]) 
+  content     String 
+  moodTag     String? 
+  isAnonymous Boolean   @default(true) 
+  isHidden    Boolean   @default(false) 
+  createdAt   DateTime  @default(now()) 
+  comments    Comment[] 
+  reports     Report[] 
+} 
+ 
+model Comment { 
+  id        String   @id @default(cuid()) 
+  postId    String 
+  post      Post     @relation(fields: [postId], references: [id]) 
+  userId    String 
+  user      User     @relation(fields: [userId], references: [id]) 
+  content   String 
+  createdAt DateTime @default(now()) 
+} 
+ 
+model Follow { 
+  id          String   @id @default(cuid()) 
+  followerId  String 
+  followingId String 
+  createdAt   DateTime @default(now()) 
+  @@unique([followerId, followingId]) 
+} 
+ 
+model Report { 
+  id       String   @id @default(cuid()) 
+  postId   String? 
+  post     Post?    @relation(fields: [postId], references: [id]) 
+  reporterId String 
+  reason   String 
+  status   String   @default(\"pending\") 
+  createdAt DateTime @default(now()) 
+} 
+ 
+model Block { 
+  id         String   @id @default(cuid()) 
+  blockerId  String 
+  blockedId  String 
+  createdAt  DateTime @default(now()) 
+  @@unique([blockerId, blockedId]) 
+} 
+ 
+model Device { 
+  id          String   @id @default(cuid()) 
+  userId      String 
+  user        User     @relation(fields: [userId], references: [id]) 
+  pushToken   String 
+  platform    String   @default(\"ios\") 
+  timezone    String   @default(\"UTC\") 
+  isActive    Boolean  @default(true) 
+  createdAt   DateTime @default(now()) 
+  updatedAt   DateTime @updatedAt 
+  deliveries  NotificationDelivery[] 
+} 
+ 
+model NotificationDelivery { 
+  id            String    @id @default(cuid()) 
+  deviceId      String 
+  device        Device    @relation(fields: [deviceId], references: [id]) 
+  userId        String 
+  type          String 
+  localDate     String 
+  scheduledAt   DateTime 
+  sentAt        DateTime? 
+  status        String    @default(\"scheduled\") 
+  providerId    String? 
+  createdAt     DateTime  @default(now()) 
+  @@unique([userId, type, localDate]) 
+} 
+ 
+model Entitlement { 
+  id        String   @id @default(cuid()) 
+  userId    String 
+  user      User     @relation(fields: [userId], references: [id]) 
+  productId String 
+  tier      String   @default(\"free\") 
+  expiresAt DateTime? 
+  createdAt DateTime @default(now()) 
+  updatedAt DateTime @updatedAt 
+  purchases PurchaseEvent[] 
+} 
+ 
+model PurchaseEvent { 
+  id              String   @id @default(cuid()) 
+  entitlementId   String 
+  entitlement     Entitlement @relation(fields: [entitlementId], references: [id]) 
+  platform        String 
+  transactionId   String 
+  productId       String 
+  verifiedAt      DateTime @default(now()) 
+} 
+ 
+model PrivacyRequest { 
+  id        String   @id @default(cuid()) 
+  userId    String 
+  type      String 
+  status    String   @default(\"pending\") 
+  completedAt DateTime? 
+  createdAt DateTime @default(now()) 
+} 

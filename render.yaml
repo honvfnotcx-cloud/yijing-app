@@ -1,0 +1,21 @@
+services: 
+  - type: web 
+    name: yijing-api 
+    runtime: docker 
+    dockerfilePath: ./apps/api/Dockerfile 
+    healthCheckPath: /v1/health 
+    envVars: 
+      - key: DATABASE_URL 
+        fromDatabase: 
+          name: yijing-db 
+          property: connectionString 
+      - key: REDIS_URL 
+        fromService: 
+          name: yijing-redis 
+          type: redis 
+          property: connectionString 
+ 
+  - type: static 
+    name: yijing-web 
+    buildCommand: cd apps/mobile && flutter pub get && flutter build web --dart-define=API_URL=https://yijing-api.onrender.com/v1 
+    publishPath: apps/mobile/build/web
