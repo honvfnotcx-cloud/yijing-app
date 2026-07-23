@@ -12,7 +12,7 @@ export class NotificationScheduler {
     private readonly guidance: GuidanceService, 
   ) {} 
 
-  @Cron(CronExpression.EVERY_15_MINUTES) 
+  @Cron(CronExpression.EVERY_5_MINUTES) 
   async processMorningReminders() { 
     this.logger.log('Processing morning reminders...'); 
     const devices = await this.db.device.findMany({ 
@@ -41,7 +41,7 @@ export class NotificationScheduler {
     } 
   } 
 
-  @Cron(CronExpression.EVERY_15_MINUTES) 
+  @Cron(CronExpression.EVERY_5_MINUTES) 
   async processEveningReminders() { 
     this.logger.log('Processing evening reminders...'); 
     const devices = await this.db.device.findMany({ where: { isActive: true } }); 
