@@ -1,34 +1,896 @@
-<^!DOCTYPE html> 
-<html lang=\"en\"> 
-<head> 
-<meta charset=\"UTF-8\"> 
-<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> 
-<title>Daily I Ching</title> 
-<style> 
-*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#f5f0eb;color:#1a1a2e;min-height:100vh} 
-.app{max-width:600px;margin:0 auto;padding:20px}header{text-align:center;padding:30px 0}header h1{font-size:28px;color:#5c4d7d} 
-.card{background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)} 
-.hex-symbol{font-size:64px;text-align:center;line-height:1.2} 
-.hex-name{text-align:center;font-size:22px;font-weight:700;margin:8px 0} 
-.theme-tag{display:inline-block;background:#e8e0f0;color:#5c4d7d;padding:4px 16px;border-radius:20px;font-size:14px;margin:8px 0} 
-.guidance-text{line-height:1.7;margin-top:12px;color:#333} 
-.reflection-box{background:#f0ebe4;border-radius:16px;padding:20px;margin-top:16px} 
-button{background:#5c4d7d;color:#fff;border:none;padding:12px 24px;border-radius:12px;font-size:16px;cursor:pointer;width:100%%} 
-button:hover{opacity:.9} 
-.loading{text-align:center;padding:60px 20px;color:#999} 
-.error{text-align:center;padding:40px;color:#c0392b} 
-.empty{text-align:center;padding:60px 20px;color:#999}
-</style> 
-</head> 
-<body> 
-<div class=\"app\"> 
-<header><h1>? Daily I Ching</h1><p>Your daily guidance, powered by the Book of Changes</p></header> 
-<div id=\"content\" class=\"loading\">Loading your guidance...</div> 
-</div> 
-<script> 
-const API = '/v1';const uid='demo-user'; 
-async function load(){try{const r=await fetch(API+'/guidance/today?userId='+uid);if(!r.ok)throw new Error();const d=await r.json();document.getElementById('content').innerHTML='<div class=\"card\"><div class=\"hex-symbol\">'+d.hexagramSymbol+'</div><div class=\"hex-name\">Hexagram '+d.hexagram+': '+d.hexagramName+'</div><div style=\"text-align:center\"><span class=\"theme-tag\">'+d.theme+'</span></div><div class=\"guidance-text\">'+d.guidance+'</div><div class=\"reflection-box\"><strong>Reflection</strong><p style=\"margin-top:8px;font-style:italic\">'+d.reflectionQuestion+'</p></div></div>'}catch(e){document.getElementById('content').innerHTML='<div class=\"card empty\"><h3>No guidance yet</h3><p>Set up your birth profile to receive daily I Ching readings.</p><p style=\"margin-top:16px\"><code>POST /v1/profiles</code></p></div>'} 
-}load();
-</script> 
-</body> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="I Ching">
+<link rel="manifest" href="/manifest.json">
+<title>Daily I Ching</title>
+<style>
+:root{--bg:#f5f0eb;--card:#fff;--text:#1a1a2e;--purple:#5c4d7d;--light-purple:#e8e0f0;--gold:#c9a84c;--red:#c0392b;--green:#27ae60;--tab-active:#5c4d7d;--tab-inactive:#999}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:70px}
+.hidden{display:none!important}
+.app-header{background:linear-gradient(135deg,#2d1b69,#5c4d7d);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between}
+.app-header .title-area{text-align:center;flex:1}
+.app-header h1{font-size:18px;font-weight:600}
+.app-header p{font-size:11px;opacity:.8;margin-top:1px}
+.lang-toggle{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer;white-space:nowrap;transition:.2s}
+.lang-toggle:active{background:rgba(255,255,255,.3)}
+.screen{padding:16px;max-width:600px;margin:0 auto}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+.hex-symbol{font-size:56px;text-align:center;line-height:1.1}
+.hex-name{text-align:center;font-size:20px;font-weight:700;margin:8px 0;color:var(--purple)}
+.theme-tag{display:inline-block;background:var(--light-purple);color:var(--purple);padding:4px 16px;border-radius:20px;font-size:13px}
+.guidance-text{line-height:1.8;margin-top:12px;font-size:15px}
+.mood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.mood-btn{padding:10px;border:2px solid #ddd;border-radius:12px;background:#fff;font-size:24px;cursor:pointer;text-align:center;transition:.2s}
+.mood-btn:active,.mood-btn.selected{border-color:var(--purple);background:var(--light-purple)}
+.btn{background:var(--purple);color:#fff;border:none;padding:14px;border-radius:12px;font-size:16px;cursor:pointer;width:100%;font-weight:600;transition:.2s}
+.btn:active{opacity:.8}
+.btn-outline{background:#fff;color:var(--purple);border:2px solid var(--purple);margin-top:8px}
+.input{border:2px solid #ddd;border-radius:12px;padding:14px;font-size:15px;width:100%;background:#fff;font-family:inherit}
+.input:focus{border-color:var(--purple);outline:none}
+textarea.input{min-height:100px;resize:vertical}
+.label{font-size:14px;font-weight:600;color:var(--purple);margin-bottom:6px;display:block}
+.feed-item{background:var(--card);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.feed-item .author{font-size:14px;font-weight:600;color:var(--purple)}
+.feed-item .time{font-size:11px;color:#999}
+.feed-item .content{font-size:14px;margin-top:6px;line-height:1.6}
+.feed-item .tag{display:inline-block;background:var(--light-purple);color:var(--purple);padding:2px 10px;border-radius:10px;font-size:11px;margin-top:6px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #eee;z-index:10;padding:6px 0 env(safe-area-inset-bottom)}
+.nav-item{flex:1;text-align:center;padding:6px 0;cursor:pointer;color:var(--tab-inactive);font-size:11px;transition:.2s}
+.nav-item.active{color:var(--tab-active)}
+.nav-item .icon{font-size:22px;display:block}
+.loading{text-align:center;padding:60px 20px;color:#999;font-size:15px}
+.empty-state{text-align:center;padding:40px 20px;color:#999}
+.empty-state .icon{font-size:48px;display:block;margin-bottom:12px}
+.form-group{margin-bottom:14px}
+.form-row{display:flex;gap:10px}
+.form-row>*{flex:1}
+.user-id-display{font-size:12px;color:#999;text-align:center;margin-top:8px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:10px;z-index:99;font-size:14px;transition:.3s;opacity:0;pointer-events:none}
+.toast.show{opacity:1}
+
+.email-status{font-size:13px;padding:8px 12px;border-radius:10px;margin-bottom:10px}
+.email-status.set{background:#e8f5e9;color:#2e7d32}
+.email-status.notset{background:#fff3e0;color:#e65100}
+
+.lang-select{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);padding:5px 8px;border-radius:16px;font-size:12px;cursor:pointer;outline:none}
+.lang-select option{color:#333;background:#fff}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="title-area"><h1>☯ <span data-i18n="appTitle">Daily I Ching</span></h1><p data-i18n="appSubtitle">Guidance from the Book of Changes</p></div>
+  <select class="lang-select" onchange="changeLang(this.value)"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option><option value="ru">Русский</option><option value="ar">العربية</option></select>
+</div>
+
+<section id="screen-today" class="screen"><div id="today-content" class="loading"><span data-i18n="loading">Loading...</span></div></section>
+<section id="screen-history" class="screen hidden"><div id="history-content" class="loading"><span data-i18n="loading">Loading...</span></div></section>
+<section id="screen-community" class="screen hidden"><div id="community-content" class="loading"><span data-i18n="loading">Loading...</span></div></section>
+<section id="screen-reflect" class="screen hidden"><div id="reflect-content"></div></section>
+<section id="screen-profile" class="screen hidden"><div id="profile-content"></div></section>
+
+<nav class="bottom-nav">
+  <div class="nav-item active" data-screen="today"><span class="icon">☀</span><span data-i18n="navToday">Today</span></div>
+  <div class="nav-item" data-screen="history"><span class="icon">📋</span><span data-i18n="navHistory">History</span></div>
+  <div class="nav-item" data-screen="community"><span class="icon">👥</span><span data-i18n="navCommunity">Community</span></div>
+  <div class="nav-item" data-screen="reflect"><span class="icon">🧘</span><span data-i18n="navReflect">Reflect</span></div>
+  <div class="nav-item" data-screen="profile"><span class="icon">👤</span><span data-i18n="navProfile">Me</span></div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const I18N = {
+  zh: {
+    appTitle: "每日易经",
+    appSubtitle: "源自《易经》的每日指引",
+    langLabel: "EN",
+    loading: "加载中...",
+    navToday: "今日",
+    navHistory: "记录",
+    navCommunity: "社区",
+    navReflect: "复盘",
+    navProfile: "我的",
+    noProfile: "请先创建生辰档案",
+    noProfileHint: "前往「我的」页面输入你的出生信息",
+    setupProfileBtn: "创建档案",
+    noGuidance: "暂无今日指引",
+    todayHint: "创建生辰档案后，即可获取每日易经解读",
+    favorable: "✅ 宜",
+    caution: "⚠ 忌",
+    tonightsReflection: "💭 今晚复盘",
+    moonPhase: "月相",
+    luckyColor: "幸运色",
+    luckyNumber: "幸运数",
+    noHistory: "还没有复盘记录",
+    noPosts: "社区很安静，成为第一个分享的人吧！",
+    communityHint: "社区加载中...",
+    eveningReflection: "晚间复盘",
+    howWasDay: "今天过得怎么样？",
+    yourThoughts: "你的想法",
+    thoughtsPlaceholder: "今天发生了什么？学到了什么？",
+    saveReflection: "保存复盘",
+    saveSuccess: "复盘已保存！✨",
+    saveFailed: "保存失败",
+    writeReflection: "请写下你的复盘",
+    birthProfile: "生辰档案",
+    profileSet: "✅ 档案已设置",
+    profileNotSet: "输入出生信息，获取个性化易经解读",
+    birthDate: "出生日期",
+    birthTime: "出生时间",
+    birthPlace: "出生地点",
+    gender: "性别",
+    timezone: "时区",
+    male: "男",
+    female: "女",
+    other: "其他",
+    createProfile: "创建档案",
+    updateProfile: "更新档案",
+    resetProfile: "重置档案",
+    profileSaved: "档案已保存！🎉",
+    profileFailed: "档案保存失败",
+    enterBirthDate: "请输入出生日期",
+    userId: "用户ID",
+    aboutTitle: "关于每日易经",
+    aboutText: "基于古老的《易经》，此应用通过你的出生日期和时间生成每日卦象解读。每天早上接收个性化指引，每晚复盘反思。信赖易经的智慧。",
+    anonymous: "匿名用户",
+    justNow: "刚刚",
+    free: "免费版",
+    ok: "确定"
+  },
+  en: {
+    appTitle: "Daily I Ching",
+    appSubtitle: "Guidance from the Book of Changes",
+    langLabel: "中",
+    loading: "Loading...",
+    navToday: "Today",
+    navHistory: "History",
+    navCommunity: "Community",
+    navReflect: "Reflect",
+    navProfile: "Me",
+    noProfile: "Set up your profile first",
+    noProfileHint: "Go to the Me tab to enter your birth info",
+    setupProfileBtn: "Set Up Profile",
+    noGuidance: "No guidance yet",
+    todayHint: "Set up your birth profile to receive daily I Ching readings",
+    favorable: "✅ Favorable",
+    caution: "⚠ Caution",
+    tonightsReflection: "💭 Tonight's Reflection",
+    moonPhase: "Moon Phase",
+    luckyColor: "Lucky Color",
+    luckyNumber: "Lucky Number",
+    noHistory: "No past reflections yet",
+    noPosts: "Community is quiet right now. Be the first to share!",
+    communityHint: "Community is loading...",
+    eveningReflection: "Evening Reflection",
+    howWasDay: "How was your day?",
+    yourThoughts: "Your thoughts",
+    thoughtsPlaceholder: "What happened today? What did you learn?",
+    saveReflection: "Save Reflection",
+    saveSuccess: "Reflection saved! ✨",
+    saveFailed: "Failed to save",
+    writeReflection: "Please write a reflection",
+    birthProfile: "Your Birth Profile",
+    profileSet: "✅ Profile is set",
+    profileNotSet: "Enter your birth details to get personalized I Ching readings",
+    birthDate: "Birth Date",
+    birthTime: "Birth Time",
+    birthPlace: "Birth Place",
+    gender: "Gender",
+    timezone: "Timezone",
+    male: "Male",
+    female: "Female",
+    other: "Other",
+    createProfile: "Create Profile",
+    updateProfile: "Update Profile",
+    resetProfile: "Reset Profile",
+    profileSaved: "Profile saved! 🎉",
+    profileFailed: "Failed to save profile",
+    enterBirthDate: "Please enter your birth date",
+    userId: "User ID",
+    aboutTitle: "About Daily I Ching",
+    aboutText: "Based on the ancient Book of Changes (易经), this app uses your birth date and time to generate daily hexagram readings. Each morning, receive personalized guidance. Each evening, reflect on your day. Trust the wisdom of the I Ching.",
+    anonymous: "Anonymous User",
+    justNow: "just now",
+    free: "Free",
+    ok: "OK"
+  }
+,
+  "ja": {
+    "appTitle": "每日易経",
+    "appSubtitle": "易経からの日々の導き",
+    "loading": "読み込み中...",
+    "navToday": "今日",
+    "navHistory": "履歴",
+    "navCommunity": "コミュニティ",
+    "navReflect": "振り返り",
+    "navProfile": "マイ",
+    "noProfile": "プロフィールを作成してください",
+    "noProfileHint": "マイページで出生情報を入力",
+    "setupProfileBtn": "プロフィール設定",
+    "noGuidance": "まだありません",
+    "todayHint": "プロフィール設定後に易経の解読を",
+    "favorable": "✅ 吉",
+    "caution": "⚠ 凶",
+    "tonightsReflection": "💭 今夜の振り返り",
+    "moonPhase": "月相",
+    "luckyColor": "ラッキーカラー",
+    "luckyNumber": "ラッキーナンバー",
+    "noHistory": "記録なし",
+    "noPosts": "最初にシェアしましょう！",
+    "communityHint": "読み込み中...",
+    "eveningReflection": "夜の振り返り",
+    "howWasDay": "今日はどうでしたか？",
+    "yourThoughts": "考え",
+    "thoughtsPlaceholder": "今日何があった？何を学んだ？",
+    "saveReflection": "保存",
+    "saveSuccess": "保存しました✨",
+    "saveFailed": "失敗",
+    "writeReflection": "振り返りを書いてください",
+    "birthProfile": "出生プロフィール",
+    "profileSet": "✅ 設定済み",
+    "profileNotSet": "出生情報を入力",
+    "emailLabel": "メール",
+    "emailPlaceholder": "your@email.com",
+    "emailSet": "✅ 登録済み",
+    "emailNotSet": "メールでアカウント作成",
+    "birthDate": "生年月日",
+    "birthTime": "出生時間",
+    "birthPlace": "出生地",
+    "selectCountry": "国を選択",
+    "selectRegion": "地域を選択",
+    "selectCity": "都市を選択",
+    "gender": "性別",
+    "male": "男性",
+    "female": "女性",
+    "other": "その他",
+    "createProfile": "作成",
+    "updateProfile": "更新",
+    "resetProfile": "リセット",
+    "profileSaved": "保存🎉",
+    "profileFailed": "失敗",
+    "enterBirthDate": "生年月日を入力",
+    "enterEmail": "メールを入力",
+    "userId": "ユーザーID",
+    "aboutTitle": "易経について",
+    "aboutText": "古代の易経に基づき、生年月日から毎日の卦を生成。",
+    "anonymous": "匿名",
+    "justNow": "たった今",
+    "free": "無料版",
+    "ok": "OK"
+},
+  "ko": {
+    "appTitle": "주역",
+    "appSubtitle": "주역의 매일 가이던스",
+    "loading": "로딩 중...",
+    "navToday": "오늘",
+    "navHistory": "기록",
+    "navCommunity": "커뮤니티",
+    "navReflect": "회고",
+    "navProfile": "내정보",
+    "noProfile": "프로필을 먼저 만드세요",
+    "noProfileHint": "내정보에서 출생 정보 입력",
+    "setupProfileBtn": "프로필 설정",
+    "noGuidance": "아직 없음",
+    "todayHint": "프로필 설정 후 주역 해석을 받으세요",
+    "favorable": "✅ 길",
+    "caution": "⚠ 흉",
+    "tonightsReflection": "💭 회고",
+    "moonPhase": "월상",
+    "luckyColor": "행운의 색",
+    "luckyNumber": "행운의 숫자",
+    "noHistory": "기록 없음",
+    "noPosts": "첫 공유자가 되세요!",
+    "communityHint": "로딩 중...",
+    "eveningReflection": "저녁 회고",
+    "howWasDay": "오늘 어땠나요?",
+    "yourThoughts": "생각",
+    "thoughtsPlaceholder": "무슨 일이? 무엇을 배웠나요?",
+    "saveReflection": "저장",
+    "saveSuccess": "저장 완료✨",
+    "saveFailed": "실패",
+    "writeReflection": "회고를 작성하세요",
+    "birthProfile": "출생 프로필",
+    "profileSet": "✅ 설정 완료",
+    "profileNotSet": "출생 정보 입력",
+    "emailLabel": "이메일",
+    "emailPlaceholder": "your@email.com",
+    "emailSet": "✅ 등록됨",
+    "emailNotSet": "이메일로 계정 만들기",
+    "birthDate": "생년월일",
+    "birthTime": "출생 시간",
+    "birthPlace": "출생지",
+    "selectCountry": "국가 선택",
+    "selectRegion": "지역 선택",
+    "selectCity": "도시 선택",
+    "gender": "성별",
+    "male": "남성",
+    "female": "여성",
+    "other": "기타",
+    "createProfile": "생성",
+    "updateProfile": "업데이트",
+    "resetProfile": "초기화",
+    "profileSaved": "저장 완료🎉",
+    "profileFailed": "실패",
+    "enterBirthDate": "생년월일 입력",
+    "enterEmail": "이메일 입력",
+    "userId": "사용자 ID",
+    "aboutTitle": "주역 소개",
+    "aboutText": "고대 주역에 기반하여 매일 괘상 생성.",
+    "anonymous": "익명",
+    "justNow": "방금",
+    "free": "무료",
+    "ok": "확인"
+},
+  "es": {
+    "appTitle": "I Ching Diario",
+    "appSubtitle": "Guía del Libro de los Cambios",
+    "loading": "Cargando...",
+    "navToday": "Hoy",
+    "navHistory": "Historial",
+    "navCommunity": "Comunidad",
+    "navReflect": "Reflexión",
+    "navProfile": "Yo",
+    "noProfile": "Crea tu perfil primero",
+    "noProfileHint": "Ve a Yo para ingresar tus datos",
+    "setupProfileBtn": "Configurar Perfil",
+    "noGuidance": "Sin guía aún",
+    "todayHint": "Configura tu perfil para lecturas",
+    "favorable": "✅ Favorable",
+    "caution": "⚠ Precaución",
+    "tonightsReflection": "💭 Reflexión",
+    "moonPhase": "Fase Lunar",
+    "luckyColor": "Color Suerte",
+    "luckyNumber": "Número Suerte",
+    "noHistory": "Sin reflexiones",
+    "noPosts": "¡Sé el primero!",
+    "communityHint": "Cargando...",
+    "eveningReflection": "Reflexión Nocturna",
+    "howWasDay": "¿Cómo fue tu día?",
+    "yourThoughts": "Tus pensamientos",
+    "thoughtsPlaceholder": "¿Qué pasó? ¿Qué aprendiste?",
+    "saveReflection": "Guardar",
+    "saveSuccess": "¡Guardado!✨",
+    "saveFailed": "Error",
+    "writeReflection": "Escribe una reflexión",
+    "birthProfile": "Perfil de Nacimiento",
+    "profileSet": "✅ Listo",
+    "profileNotSet": "Ingresa tus datos",
+    "emailLabel": "Email",
+    "emailPlaceholder": "tu@email.com",
+    "emailSet": "✅ Registrado",
+    "emailNotSet": "Configura tu email",
+    "birthDate": "Fecha Nacimiento",
+    "birthTime": "Hora Nacimiento",
+    "birthPlace": "Lugar Nacimiento",
+    "selectCountry": "País",
+    "selectRegion": "Región",
+    "selectCity": "Ciudad",
+    "gender": "Género",
+    "male": "Masculino",
+    "female": "Femenino",
+    "other": "Otro",
+    "createProfile": "Crear",
+    "updateProfile": "Actualizar",
+    "resetProfile": "Restablecer",
+    "profileSaved": "¡Guardado!🎉",
+    "profileFailed": "Error",
+    "enterBirthDate": "Ingresa fecha",
+    "enterEmail": "Ingresa email",
+    "userId": "ID Usuario",
+    "aboutTitle": "Acerca de",
+    "aboutText": "Basado en el Libro de los Cambios.",
+    "anonymous": "Anónimo",
+    "justNow": "ahora",
+    "free": "Gratis",
+    "ok": "OK"
+},
+  "fr": {
+    "appTitle": "Yi Jing Quotidien",
+    "appSubtitle": "Guide du Livre des Mutations",
+    "loading": "Chargement...",
+    "navToday": "Aujourd'hui",
+    "navHistory": "Historique",
+    "navCommunity": "Communauté",
+    "navReflect": "Réflexion",
+    "navProfile": "Moi",
+    "noProfile": "Créez votre profil",
+    "noProfileHint": "Allez dans Moi",
+    "setupProfileBtn": "Configurer",
+    "noGuidance": "Pas de guide",
+    "todayHint": "Configurez votre profil",
+    "favorable": "✅ Favorable",
+    "caution": "⚠ Attention",
+    "tonightsReflection": "💭 Réflexion",
+    "moonPhase": "Phase Lunaire",
+    "luckyColor": "Couleur Chance",
+    "luckyNumber": "Nombre Chance",
+    "noHistory": "Pas de réflexions",
+    "noPosts": "Soyez le premier!",
+    "communityHint": "Chargement...",
+    "eveningReflection": "Réflexion du Soir",
+    "howWasDay": "Votre journée?",
+    "yourThoughts": "Vos pensées",
+    "thoughtsPlaceholder": "Qu'avez-vous appris?",
+    "saveReflection": "Enregistrer",
+    "saveSuccess": "Enregistré!✨",
+    "saveFailed": "Échec",
+    "writeReflection": "Écrivez",
+    "birthProfile": "Profil",
+    "profileSet": "✅ Prêt",
+    "profileNotSet": "Entrez vos infos",
+    "emailLabel": "Email",
+    "emailPlaceholder": "vous@email.com",
+    "emailSet": "✅ Enregistré",
+    "emailNotSet": "Configurez",
+    "birthDate": "Date Naissance",
+    "birthTime": "Heure Naissance",
+    "birthPlace": "Lieu Naissance",
+    "selectCountry": "Pays",
+    "selectRegion": "Région",
+    "selectCity": "Ville",
+    "gender": "Genre",
+    "male": "Masculin",
+    "female": "Féminin",
+    "other": "Autre",
+    "createProfile": "Créer",
+    "updateProfile": "MàJ",
+    "resetProfile": "Réinit.",
+    "profileSaved": "Enregistré!🎉",
+    "profileFailed": "Échec",
+    "enterBirthDate": "Entrez date",
+    "enterEmail": "Entrez email",
+    "userId": "ID",
+    "aboutTitle": "À propos",
+    "aboutText": "Basé sur le Livre des Mutations.",
+    "anonymous": "Anonyme",
+    "justNow": "maintenant",
+    "free": "Gratuit",
+    "ok": "OK"
+},
+  "de": {
+    "appTitle": "Tägliches I Ging",
+    "appSubtitle": "Führung aus dem Buch der Wandlungen",
+    "loading": "Laden...",
+    "navToday": "Heute",
+    "navHistory": "Verlauf",
+    "navCommunity": "Community",
+    "navReflect": "Reflexion",
+    "navProfile": "Ich",
+    "noProfile": "Profil erstellen",
+    "noProfileHint": "Gehe zu Ich",
+    "setupProfileBtn": "Profil einrichten",
+    "noGuidance": "Keine Führung",
+    "todayHint": "Profil einrichten",
+    "favorable": "✅ Günstig",
+    "caution": "⚠ Vorsicht",
+    "tonightsReflection": "💭 Reflexion",
+    "moonPhase": "Mondphase",
+    "luckyColor": "Glücksfarbe",
+    "luckyNumber": "Glückszahl",
+    "noHistory": "Keine Einträge",
+    "noPosts": "Sei der Erste!",
+    "communityHint": "Laden...",
+    "eveningReflection": "Abendreflexion",
+    "howWasDay": "Wie war dein Tag?",
+    "yourThoughts": "Gedanken",
+    "thoughtsPlaceholder": "Was hast du gelernt?",
+    "saveReflection": "Speichern",
+    "saveSuccess": "Gespeichert!✨",
+    "saveFailed": "Fehler",
+    "writeReflection": "Schreibe",
+    "birthProfile": "Geburtsprofil",
+    "profileSet": "✅ Bereit",
+    "profileNotSet": "Daten eingeben",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "deine@email.com",
+    "emailSet": "✅ Registriert",
+    "emailNotSet": "Einrichten",
+    "birthDate": "Geburtsdatum",
+    "birthTime": "Geburtszeit",
+    "birthPlace": "Geburtsort",
+    "selectCountry": "Land",
+    "selectRegion": "Region",
+    "selectCity": "Stadt",
+    "gender": "Geschlecht",
+    "male": "Männlich",
+    "female": "Weiblich",
+    "other": "Andere",
+    "createProfile": "Erstellen",
+    "updateProfile": "Aktualisieren",
+    "resetProfile": "Zurücksetzen",
+    "profileSaved": "Gespeichert!🎉",
+    "profileFailed": "Fehler",
+    "enterBirthDate": "Datum eingeben",
+    "enterEmail": "E-Mail eingeben",
+    "userId": "Benutzer-ID",
+    "aboutTitle": "Über",
+    "aboutText": "Basiert auf dem Buch der Wandlungen.",
+    "anonymous": "Anonym",
+    "justNow": "gerade",
+    "free": "Kostenlos",
+    "ok": "OK"
+},
+  "pt": {
+    "appTitle": "I Ching Diário",
+    "appSubtitle": "Guia do Livro das Mutações",
+    "loading": "Carregando...",
+    "navToday": "Hoje",
+    "navHistory": "Histórico",
+    "navCommunity": "Comunidade",
+    "navReflect": "Reflexão",
+    "navProfile": "Eu",
+    "noProfile": "Crie seu perfil",
+    "noProfileHint": "Vá em Eu",
+    "setupProfileBtn": "Configurar",
+    "noGuidance": "Sem guia",
+    "todayHint": "Configure seu perfil",
+    "favorable": "✅ Favorável",
+    "caution": "⚠ Cuidado",
+    "tonightsReflection": "💭 Reflexão",
+    "moonPhase": "Fase Lunar",
+    "luckyColor": "Cor Sorte",
+    "luckyNumber": "Número Sorte",
+    "noHistory": "Sem reflexões",
+    "noPosts": "Seja o primeiro!",
+    "communityHint": "Carregando...",
+    "eveningReflection": "Reflexão Noturna",
+    "howWasDay": "Como foi?",
+    "yourThoughts": "Pensamentos",
+    "thoughtsPlaceholder": "O que aprendeu?",
+    "saveReflection": "Salvar",
+    "saveSuccess": "Salvo!✨",
+    "saveFailed": "Erro",
+    "writeReflection": "Escreva",
+    "birthProfile": "Perfil",
+    "profileSet": "✅ Pronto",
+    "profileNotSet": "Insira dados",
+    "emailLabel": "Email",
+    "emailPlaceholder": "seu@email.com",
+    "emailSet": "✅ Registrado",
+    "emailNotSet": "Configure",
+    "birthDate": "Nascimento",
+    "birthTime": "Hora Nasc.",
+    "birthPlace": "Local Nasc.",
+    "selectCountry": "País",
+    "selectRegion": "Região",
+    "selectCity": "Cidade",
+    "gender": "Gênero",
+    "male": "Masculino",
+    "female": "Feminino",
+    "other": "Outro",
+    "createProfile": "Criar",
+    "updateProfile": "Atualizar",
+    "resetProfile": "Redefinir",
+    "profileSaved": "Salvo!🎉",
+    "profileFailed": "Erro",
+    "enterBirthDate": "Insira data",
+    "enterEmail": "Insira email",
+    "userId": "ID",
+    "aboutTitle": "Sobre",
+    "aboutText": "Baseado no Livro das Mutações.",
+    "anonymous": "Anônimo",
+    "justNow": "agora",
+    "free": "Grátis",
+    "ok": "OK"
+},
+  "ru": {
+    "appTitle": "И-Цзин Дня",
+    "appSubtitle": "Руководство Книги Перемен",
+    "loading": "Загрузка...",
+    "navToday": "Сегодня",
+    "navHistory": "История",
+    "navCommunity": "Сообщество",
+    "navReflect": "Рефлексия",
+    "navProfile": "Я",
+    "noProfile": "Создайте профиль",
+    "noProfileHint": "Перейдите в Я",
+    "setupProfileBtn": "Настроить",
+    "noGuidance": "Нет руководства",
+    "todayHint": "Настройте профиль",
+    "favorable": "✅ Благоприятно",
+    "caution": "⚠ Осторожно",
+    "tonightsReflection": "💭 Рефлексия",
+    "moonPhase": "Фаза Луны",
+    "luckyColor": "Цвет Удачи",
+    "luckyNumber": "Число Удачи",
+    "noHistory": "Нет записей",
+    "noPosts": "Будьте первым!",
+    "communityHint": "Загрузка...",
+    "eveningReflection": "Вечерняя Рефлексия",
+    "howWasDay": "Как день?",
+    "yourThoughts": "Мысли",
+    "thoughtsPlaceholder": "Что узнали?",
+    "saveReflection": "Сохранить",
+    "saveSuccess": "Сохранено!✨",
+    "saveFailed": "Ошибка",
+    "writeReflection": "Напишите",
+    "birthProfile": "Профиль",
+    "profileSet": "✅ Готов",
+    "profileNotSet": "Введите данные",
+    "emailLabel": "Email",
+    "emailPlaceholder": "ваш@email.com",
+    "emailSet": "✅ Зарегистр.",
+    "emailNotSet": "Настройте",
+    "birthDate": "Дата Рожд.",
+    "birthTime": "Время Рожд.",
+    "birthPlace": "Место Рожд.",
+    "selectCountry": "Страна",
+    "selectRegion": "Регион",
+    "selectCity": "Город",
+    "gender": "Пол",
+    "male": "Мужской",
+    "female": "Женский",
+    "other": "Другой",
+    "createProfile": "Создать",
+    "updateProfile": "Обновить",
+    "resetProfile": "Сбросить",
+    "profileSaved": "Сохранено!🎉",
+    "profileFailed": "Ошибка",
+    "enterBirthDate": "Введите дату",
+    "enterEmail": "Введите email",
+    "userId": "ID",
+    "aboutTitle": "О И-Цзин",
+    "aboutText": "Основано на Книге Перемен.",
+    "anonymous": "Аноним",
+    "justNow": "сейчас",
+    "free": "Бесплатно",
+    "ok": "OK"
+},
+  "ar": {
+    "appTitle": "آي تشينغ اليومي",
+    "appSubtitle": "إرشادات من كتاب التغييرات",
+    "loading": "جاري التحميل...",
+    "navToday": "اليوم",
+    "navHistory": "السجل",
+    "navCommunity": "المجتمع",
+    "navReflect": "تأمل",
+    "navProfile": "أنا",
+    "noProfile": "أنشئ ملفك أولاً",
+    "noProfileHint": "اذهب إلى أنا",
+    "setupProfileBtn": "إعداد",
+    "noGuidance": "لا يوجد",
+    "todayHint": "أعد ملفك للقراءات",
+    "favorable": "✅ مناسب",
+    "caution": "⚠ حذر",
+    "tonightsReflection": "💭 تأمل",
+    "moonPhase": "طور القمر",
+    "luckyColor": "لون الحظ",
+    "luckyNumber": "رقم الحظ",
+    "noHistory": "لا تأملات",
+    "noPosts": "كن الأول!",
+    "communityHint": "تحميل...",
+    "eveningReflection": "تأمل المساء",
+    "howWasDay": "كيف كان يومك؟",
+    "yourThoughts": "أفكارك",
+    "thoughtsPlaceholder": "ماذا تعلمت؟",
+    "saveReflection": "حفظ",
+    "saveSuccess": "تم!✨",
+    "saveFailed": "فشل",
+    "writeReflection": "اكتب",
+    "birthProfile": "ملف الميلاد",
+    "profileSet": "✅ جاهز",
+    "profileNotSet": "أدخل بياناتك",
+    "emailLabel": "البريد",
+    "emailPlaceholder": "بريدك@email.com",
+    "emailSet": "✅ مسجل",
+    "emailNotSet": "أعدد البريد",
+    "birthDate": "الميلاد",
+    "birthTime": "وقت الميلاد",
+    "birthPlace": "مكان الميلاد",
+    "selectCountry": "البلد",
+    "selectRegion": "المنطقة",
+    "selectCity": "المدينة",
+    "gender": "الجنس",
+    "male": "ذكر",
+    "female": "أنثى",
+    "other": "آخر",
+    "createProfile": "إنشاء",
+    "updateProfile": "تحديث",
+    "resetProfile": "إعادة",
+    "profileSaved": "تم!🎉",
+    "profileFailed": "فشل",
+    "enterBirthDate": "أدخل التاريخ",
+    "enterEmail": "أدخل البريد",
+    "userId": "المعرف",
+    "aboutTitle": "عن",
+    "aboutText": "مبني على كتاب التغييرات.",
+    "anonymous": "مجهول",
+    "justNow": "الآن",
+    "free": "مجاني",
+    "ok": "موافق"
+}
+};
+
+let LANG=localStorage.getItem('yijing_lang')||(navigator.language.startsWith('zh')?'zh':navigator.language.startsWith('ja')?'ja':navigator.language.startsWith('ko')?'ko':navigator.language.startsWith('es')?'es':navigator.language.startsWith('fr')?'fr':navigator.language.startsWith('de')?'de':navigator.language.startsWith('pt')?'pt':navigator.language.startsWith('ru')?'ru':navigator.language.startsWith('ar')?'ar':'en');
+function t(key) { return I18N[LANG][key] || key; }
+function changeLang(l){LANG=l;localStorage.setItem('yijing_lang',l);applyI18n();refreshCurrentScreen();}
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.dataset.i18n; if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') { el.placeholder = t(k); } else { el.textContent = t(k); } });
+  document.querySelector('.lang-toggle').textContent = t('langLabel');
+  document.title = t('appTitle');
+}
+
+const API = '/v1';
+let uid = localStorage.getItem('yijing_uid') || '';
+let userEmail = localStorage.getItem('yijing_email') || '';
+let activeScreen = 'today';
+
+function api(path, opts = {}) {
+  const url = path.includes('?') ? API + path + '&userId=' + uid : API + path + '?userId=' + uid;
+  return fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts }).then(r => r.ok ? r.json() : Promise.reject(r));
+}
+
+function showToast(msg) { const tEl = document.getElementById('toast'); tEl.textContent = msg; tEl.classList.add('show'); setTimeout(() => tEl.classList.remove('show'), 2000); }
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.remove('hidden');
+  document.querySelector('[data-screen="' + name + '"]').classList.add('active');
+  activeScreen = name;
+  if (name === 'today') loadToday();
+  else if (name === 'history') loadHistory();
+  else if (name === 'community') loadFeed();
+  else if (name === 'reflect') renderReflect();
+  else if (name === 'profile') renderProfile();
+}
+
+function refreshCurrentScreen() { switchScreen(activeScreen); }
+
+document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => switchScreen(n.dataset.screen)));
+
+async function loadToday() {
+  const el = document.getElementById('today-content');
+  if (!uid) { el.innerHTML = renderEmptyState('👤', t('noProfile'), t('noProfileHint'), 'setupProfileBtn', () => switchScreen('profile')); return; }
+  try {
+    const d = await api('/guidance/today');
+    if (!d || !d.hexagram) { el.innerHTML = renderEmptyState('☯', t('noGuidance'), t('todayHint'), 'setupProfileBtn', () => switchScreen('profile')); return; }
+    el.innerHTML = `
+      <div class="card" style="text-align:center">
+        <div class="hex-symbol">${d.hexagramSymbol || '☯'}</div>
+        <div class="hex-name">${t('hexagram') || 'Hexagram'} ${d.hexagram || '—'}: ${d.hexagramName || ''}</div>
+        <span class="theme-tag">${d.theme || ''}</span>
+        <div class="guidance-text">${d.guidance || ''}</div>
+        ${d.moonPhase ? `<p style="font-size:13px;color:#999;margin-top:8px">🌙 ${t('moonPhase')}: ${d.moonPhase} · 🎨 ${t('luckyColor')}: ${d.luckyColor || '—'} · 🔢 ${t('luckyNumber')}: ${d.luckyNumber || '—'}</p>` : ''}
+        ${d.doList && d.doList.length ? `<div style="margin-top:12px;text-align:left;font-size:14px;background:#f0faf0;padding:12px;border-radius:12px"><strong>${t('favorable')}:</strong><br>${d.doList.map(i => '· ' + i).join('<br>')}</div>` : ''}
+        ${d.dontList && d.dontList.length ? `<div style="margin-top:8px;text-align:left;font-size:14px;background:#faf0f0;padding:12px;border-radius:12px"><strong>${t('caution')}:</strong><br>${d.dontList.map(i => '· ' + i).join('<br>')}</div>` : ''}
+        ${d.reflectionQuestion ? `<div class="card" style="background:#f0ebe4;margin-top:12px"><strong>${t('tonightsReflection')}</strong><p style="margin-top:6px;font-style:italic">${d.reflectionQuestion}</p></div>` : ''}
+      </div>`;
+  } catch (e) { el.innerHTML = renderEmptyState('☯', t('noGuidance'), t('todayHint'), 'setupProfileBtn', () => switchScreen('profile')); }
+}
+
+function renderEmptyState(icon, title, desc, btnKey, btnAction) {
+  return `<div class="empty-state"><span class="icon">${icon}</span><h3>${title}</h3><p style="margin-top:8px">${desc}</p>${btnKey ? `<button class="btn" style="margin-top:16px" onclick="(${btnAction.toString()})()">${t(btnKey)}</button>` : ''}</div>`;
+}
+
+async function loadHistory() {
+  const el = document.getElementById('history-content');
+  if (!uid) { el.innerHTML = renderEmptyState('📋', t('noProfile'), ''); return; }
+  try {
+    const list = await api('/reflections');
+    if (!list.length) { el.innerHTML = renderEmptyState('📋', t('noHistory'), ''); return; }
+    el.innerHTML = list.map(r => `<div class="feed-item"><div class="author">${r.mood || '🤔'}</div><div class="time">${new Date(r.createdAt).toLocaleDateString()}</div><div class="content">${r.note || ''}</div></div>`).join('');
+  } catch (e) { el.innerHTML = renderEmptyState('📋', t('noHistory'), ''); }
+}
+
+async function loadFeed() {
+  const el = document.getElementById('community-content');
+  try {
+    const posts = await api('/community/feed?page=1&limit=30');
+    if (!posts || !posts.length) { el.innerHTML = renderEmptyState('👥', t('noPosts'), ''); return; }
+    el.innerHTML = posts.map(p => {
+      const name = p.isAnonymous ? t('anonymous') : (p.authorName || t('anonymous'));
+      return `<div class="feed-item"><div class="author">${name}</div><div class="time">${new Date(p.createdAt).toLocaleString()}</div><div class="content">${p.content || ''}</div>${p.moodTag ? `<span class="tag">${p.moodTag}</span>` : ''}</div>`;
+    }).join('');
+  } catch (e) { el.innerHTML = renderEmptyState('👥', t('communityHint'), ''); }
+}
+
+function renderReflect() {
+  const el = document.getElementById('reflect-content');
+  if (!uid) { el.innerHTML = renderEmptyState('🧘', t('noProfile'), ''); return; }
+  el.innerHTML = `
+    <div class="card"><h3 style="color:var(--purple);margin-bottom:14px">${t('eveningReflection')}</h3>
+    <div class="form-group"><label class="label">${t('howWasDay')}</label>
+    <div class="mood-grid" id="mood-selector">
+      <div class="mood-btn selected" data-mood="😊">😊</div><div class="mood-btn" data-mood="😌">😌</div><div class="mood-btn" data-mood="😐">😐</div><div class="mood-btn" data-mood="😔">😔</div>
+    </div></div>
+    <div class="form-group"><label class="label">${t('yourThoughts')}</label><textarea class="input" id="reflect-note" placeholder="${t('thoughtsPlaceholder')}"></textarea></div>
+    <button class="btn" onclick="submitReflection()">${t('saveReflection')}</button></div>
+  `;
+  document.querySelectorAll('#mood-selector .mood-btn').forEach(b => b.addEventListener('click', function () {
+    document.querySelectorAll('#mood-selector .mood-btn').forEach(x => x.classList.remove('selected'));
+    this.classList.add('selected');
+  }));
+}
+
+async function submitReflection() {
+  const mood = document.querySelector('#mood-selector .mood-btn.selected')?.dataset.mood || '😊';
+  const note = document.getElementById('reflect-note')?.value || '';
+  if (!note.trim()) { showToast(t('writeReflection')); return; }
+  try { await api('/reflections', { method: 'POST', body: JSON.stringify({ mood, note }) }); showToast(t('saveSuccess')); loadHistory(); } catch (e) { showToast(t('saveFailed')); }
+}
+
+// locData - 16 countries
+const locData={"CN":{"name":"China / 中国","tz":"Asia/Shanghai","r":{"Beijing":{"n":"Beijing / 北京","c":["东城","西城","朝阳","海淀"]},"Shanghai":{"n":"Shanghai / 上海","c":["黄浦","徐汇","浦东"]},"Guangdong":{"n":"Guangdong / 广东","c":["广州","深圳","东莞"]},"Zhejiang":{"n":"Zhejiang / 浙江","c":["杭州","宁波"]},"Sichuan":{"n":"Sichuan / 四川","c":["成都"]},"Fujian":{"n":"Fujian / 福建","c":["福州","厦门"]},"Jiangsu":{"n":"Jiangsu / 江苏","c":["南京","苏州"]},"Taiwan":{"n":"Taiwan / 台湾","c":["台北","高雄"]},"HK":{"n":"Hong Kong / 香港","c":["中西区","九龙","东区"]}}},"US":{"name":"United States","tz":"America/New_York","r":{"CA":{"n":"California","c":["Los Angeles","San Francisco","San Diego"]},"NY":{"n":"New York","c":["New York City","Buffalo"]},"TX":{"n":"Texas","c":["Houston","Austin","Dallas"]},"FL":{"n":"Florida","c":["Miami","Orlando"]},"IL":{"n":"Illinois","c":["Chicago"]},"WA":{"n":"Washington","c":["Seattle"]}}},"JP":{"name":"Japan / 日本","tz":"Asia/Tokyo","r":{"Tokyo":{"n":"東京","c":["新宿","渋谷","港区"]},"Osaka":{"n":"大阪","c":["北区","中央区"]},"Kyoto":{"n":"京都","c":["中京区","東山区"]}}},"KR":{"name":"Korea / 한국","tz":"Asia/Seoul","r":{"Seoul":{"n":"서울","c":["강남","홍대","명동"]},"Busan":{"n":"부산","c":["해운대","서면"]}}},"GB":{"name":"United Kingdom","tz":"Europe/London","r":{"England":{"n":"England","c":["London","Manchester","Birmingham"]},"Scotland":{"n":"Scotland","c":["Edinburgh","Glasgow"]}}},"FR":{"name":"France","tz":"Europe/Paris","r":{"IDF":{"n":"Île-de-France","c":["Paris","Versailles"]},"Provence":{"n":"Provence","c":["Marseille","Nice"]}}},"DE":{"name":"Deutschland","tz":"Europe/Berlin","r":{"Berlin":{"n":"Berlin","c":["Mitte","Kreuzberg"]},"Bayern":{"n":"Bayern","c":["München","Nürnberg"]},"Hamburg":{"n":"Hamburg","c":["Hamburg"]}}},"CA":{"name":"Canada","tz":"America/Toronto","r":{"ON":{"n":"Ontario","c":["Toronto","Ottawa"]},"BC":{"n":"British Columbia","c":["Vancouver","Victoria"]},"QC":{"n":"Québec","c":["Montréal","Québec"]}}},"AU":{"name":"Australia","tz":"Australia/Sydney","r":{"NSW":{"n":"New South Wales","c":["Sydney","Newcastle"]},"VIC":{"n":"Victoria","c":["Melbourne","Geelong"]},"QLD":{"n":"Queensland","c":["Brisbane","Gold Coast"]}}},"SG":{"name":"Singapore","tz":"Asia/Singapore","r":{"SG":{"n":"Singapore","c":["Central","East","North","West"]}}},"MY":{"name":"Malaysia","tz":"Asia/Kuala_Lumpur","r":{"KL":{"n":"Kuala Lumpur","c":["KLCC","Bangsar"]},"Penang":{"n":"Penang","c":["George Town"]}}},"TH":{"name":"Thailand","tz":"Asia/Bangkok","r":{"Bangkok":{"n":"Bangkok","c":["Sukhumvit","Silom"]},"ChiangMai":{"n":"Chiang Mai","c":["Old City"]}}},"IN":{"name":"India","tz":"Asia/Kolkata","r":{"MH":{"n":"Maharashtra","c":["Mumbai","Pune"]},"DL":{"n":"Delhi","c":["New Delhi"]},"KA":{"n":"Karnataka","c":["Bangalore"]}}},"BR":{"name":"Brasil","tz":"America/Sao_Paulo","r":{"SP":{"n":"São Paulo","c":["São Paulo","Campinas"]},"RJ":{"n":"Rio de Janeiro","c":["Rio","Niterói"]}}},"AE":{"name":"UAE","tz":"Asia/Dubai","r":{"Dubai":{"n":"Dubai","c":["Marina","Downtown"]},"AbuDhabi":{"n":"Abu Dhabi","c":["Abu Dhabi"]}}},"RU":{"name":"Россия","tz":"Europe/Moscow","r":{"Moscow":{"n":"Москва","c":["Центр","Север"]},"SPB":{"n":"Saint Petersburg","c":["Центр"]}}}};
+let selectedCountry=null,selectedRegion=null,selectedTz=null;
+function onCountryChange(){
+  const v=document.getElementById("country-select")?.value;
+  const rs=document.getElementById("region-select");
+  const cs=document.getElementById("city-select");
+  if(!v||!locData[v]){rs.classList.add("hidden");cs.classList.add("hidden");selectedCountry=null;selectedTz=null;return}
+  selectedCountry=v;selectedTz=locData[v].tz||null;
+  const regions=locData[v].r||{};
+  let opts="<option value=\"\">"+t("selectRegion")+"</option>";
+  for(let k in regions){opts+="<option value=\""+k+"\">"+regions[k].n+"</option>";}
+  rs.innerHTML=opts;rs.classList.remove("hidden");
+  cs.classList.add("hidden");selectedRegion=null;
+}
+function onRegionChange(){
+  const v=document.getElementById("region-select")?.value;
+  const cs=document.getElementById("city-select");
+  if(!v||!selectedCountry||!locData[selectedCountry]||!locData[selectedCountry].r[v]){cs.classList.add("hidden");selectedRegion=null;return}
+  selectedRegion=v;
+  const cities=locData[selectedCountry].r[v].c||[];
+  let opts="<option value=\"\">"+t("selectCity")+"</option>";
+  cities.forEach(function(c){opts+="<option value=\""+c+"\">"+c+"</option>";});
+  cs.innerHTML=opts;cs.classList.remove("hidden");
+}
+function renderProfile(){
+  const el=document.getElementById("profile-content");
+  let co="";
+  for(let k in locData){co+="<option value=\""+k+"\">"+locData[k].name+"</option>";}
+  let emailStatus=userEmail?"<p class=\"email-status set\">✅ "+t("emailSet")+": "+userEmail+"</p>":"<p class=\"email-status notset\">⚠ "+t("emailNotSet")+"</p>";
+  el.innerHTML=`
+    <div class="card"><h3 style="color:var(--purple);margin-bottom:14px">${t("birthProfile")}</h3>
+    ${emailStatus}
+    <div class="form-group"><label class="label">${t("emailLabel")}</label><input class="input" type="email" id="profile-email" placeholder="${t("emailPlaceholder")}" value="${userEmail||""}"></div>
+    <div class="form-group"><label class="label">${t("birthDate")}</label><input class="input" type="date" id="birth-date"></div>
+    <div class="form-group"><label class="label">${t("birthTime")}</label><input class="input" type="time" id="birth-time" value="12:00"></div>
+    <div class="form-group"><label class="label">${t("birthPlace")}</label>
+      <select class="input" id="country-select" onchange="onCountryChange()"><option value="">${t("selectCountry")}</option>${co}</select>
+      <select class="input hidden" id="region-select" onchange="onRegionChange()" style="margin-top:6px"><option value="">${t("selectRegion")}</option></select>
+      <select class="input hidden" id="city-select" style="margin-top:6px"><option value="">${t("selectCity")}</option></select>
+    </div>
+    <div class="form-group"><label class="label">${t("gender")}</label><select class="input" id="gender"><option value="male">${t("male")}</option><option value="female">${t("female")}</option><option value="other">${t("other")}</option></select></div>
+    <button class="btn" onclick="saveProfile()">${uid?t("updateProfile"):t("createProfile")}</button>
+    ${uid?"<button class=\"btn btn-outline\" onclick=\"resetProfile()\">"+t("resetProfile")+"</button>":""}
+    <p class="user-id-display">${t("userId")}: ${uid||"—"}</p></div>
+    <div class="card"><h3 style="color:var(--purple);margin-bottom:8px">${t("aboutTitle")}</h3><p style="font-size:14px;line-height:1.7;color:#666">${t("aboutText")}</p></div>
+  `;
+}
+
+async function saveProfile(){
+  const email=document.getElementById("profile-email")?.value?.trim();
+  const birthDate=document.getElementById("birth-date")?.value;
+  const birthTime=document.getElementById("birth-time")?.value||"12:00";
+  const country=document.getElementById("country-select")?.value;
+  const region=document.getElementById("region-select")?.value;
+  const city=document.getElementById("city-select")?.value;
+  const gender=document.getElementById("gender")?.value||"other";
+  if(!email){showToast(t("enterEmail")||"Please enter your email");return}
+  if(!birthDate){showToast(t("enterBirthDate"));return}
+  let pn="";if(city)pn=city;if(region&&country&&locData[country]&&locData[country].r[region]){let rn=locData[country].r[region].n;pn=pn?pn+", "+rn:rn;}if(country&&locData[country]){let cn=locData[country].name;pn=pn?pn+", "+cn:cn;}if(!pn)pn="Unknown";
+  const tz=selectedTz||Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body={email,birthDateLocal:birthDate,birthTimeLocal:birthTime,precision:"exact",birthTimezone:tz,encryptedPlace:pn};
+  try{
+    const res=await fetch(API+"/profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const data=await res.json();
+    if(data.userId){uid=data.userId;userEmail=email;localStorage.setItem("yijing_uid",uid);localStorage.setItem("yijing_email",email);showToast(t("profileSaved"));renderProfile();loadToday();}
+    else{showToast(t("profileFailed"));}
+  }catch(e){showToast(t("profileFailed"));}
+}
+
+function resetProfile(){localStorage.removeItem("yijing_uid");localStorage.removeItem("yijing_email");uid="";userEmail="";renderProfile();switchScreen("today");showToast(t("profileSaved"));}
+
+applyI18n();
+switchScreen('today');
+</script>
+</body>
 </html>
